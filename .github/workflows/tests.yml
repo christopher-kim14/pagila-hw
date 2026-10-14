@@ -33,3 +33,4 @@ jobs:
 
         # run the tests
         docker compose exec -T pg ./run_tests.sh
+
