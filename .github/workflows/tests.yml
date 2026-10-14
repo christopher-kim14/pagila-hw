@@ -8,28 +8,28 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
+    - uses: actions/checkout@v2
     - name: docker
       run: |
+        # load the pagila data
+        git submodule init
+        git submodule update
+        git checkout main
+
         # run the database in docker container
-        # (GitHub's runners ship Docker Compose v2, so the command is
-        # `docker compose`; the old `docker-compose` binary is no longer installed)
         docker compose up -d --build
 
         # verify that it is running successfully
+        # this is an idempotent command useful for debugging
         docker ps -a
 
-        # wait until the pagila data has finished loading;
-        # during initialization postgres only listens on a unix socket,
-        # so a TCP connection succeeds only once the data load is complete
-        for i in $(seq 1 120); do
-          if docker compose exec -T pg pg_isready -h 127.0.0.1 -q; then
-            break
-          fi
-          sleep 2
-        done
+        # after the database starts successfully,
+        # it needs time to load the pagila data;
+        # this should happen in <1 second,
+        # but we sleep for a long time just to be sure that everything is loaded;
+        # this is a bit hacky,
+        # and a proper check would be to have an infinite loop that terminates once the data has been loaded
+        sleep 20
 
         # run the tests
         docker compose exec -T pg ./run_tests.sh
